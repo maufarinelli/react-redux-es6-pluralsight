@@ -11,13 +11,38 @@ class ManageCoursePage extends React.Component {
     this.state = {
       course: Object.assign({}, this.props.course),
       errors: {}
+    };
+
+    this.updateCourseState = this.updateCourseState.bind(this);
+    this.saveCourse = this.saveCourse.bind(this);
+  }
+
+  componentsWillReceiveProps(nextProps) {
+    if(this.props.course.id !== nextProps.course.id) {
+      // Necessary to populate form when existing course is loaded directly
+      this.setState({course: Object.assign({}, nextProps.course)});
     }
+  }
+
+  updateCourseState(event) {
+    const field = event.target.name;
+    let course = Object.assign({}, this.state.course);
+    course[field] = event.target.value;
+    return this.setState({course: course});
+  }
+
+  saveCourse(event) {
+    event.preventDefault();
+    this.props.actions.saveCourse(this.state.course);
+    this.context.router.push('/courses');
   }
 
   render() {
     return (
       <CourseForm
         allAuthors={this.props.authors}
+        onChange={this.updateCourseState}
+        onSave={this.saveCourse}
         course={this.state.course}
         errors={this.state.errors}
       />
@@ -27,18 +52,36 @@ class ManageCoursePage extends React.Component {
 
 ManageCoursePage.propTypes = {
   course: PropTypes.object.isRequired,
-  authors: PropTypes.array.isRequired
+  authors: PropTypes.array.isRequired,
+  actions: PropTypes.object.isRequired
 };
 
-function mapStateToProps(state) {
+// Pull in the React Router context so router is available on this.context.router
+ManageCoursePage.contextTypes = {
+  router: PropTypes.object
+};
+
+function getCourseById(courses, id) {
+  const course = courses.filter(course => course.id === id);
+  if(course.length) return course[0];
+  return null;
+}
+
+function mapStateToProps(state, ownProps) {
+  const courseId = ownProps.params.id;
   let course = {
-      id: "react-flux-building-applications",
-      title: "Building Applications in React and Flux",
-      watchHref: "http://www.pluralsight.com/courses/react-flux-building-applications",
-      authorId: "cory-house",
-      length: "5:08",
-      category: "JavaScript"
-    };
+    id: '',
+    title: '',
+    watchHref: '',
+    authorId: '',
+    length: '',
+    category: ''
+  };
+
+  if(courseId && state.courses.length > 0) {
+    course = getCourseById(state.courses, courseId);
+  }
+
 
   const authorsFormattedForDropdown = state.authors.map(author => ({
     value: author.id,
